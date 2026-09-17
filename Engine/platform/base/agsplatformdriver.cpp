@@ -123,7 +123,7 @@ void AGSPlatformDriver::WriteStdErr(const char *fmt, ...)
 void AGSPlatformDriver::DisplayMessageBox(const char *text)
 {
     if (_guiMode)
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, "Adventure Game Studio", text, sys_get_window());
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, "Sierra Quest", text, sys_get_window()); // Sierra Quest: retitled from "Adventure Game Studio"
 }
 
 void AGSPlatformDriver::YieldCPU() {
