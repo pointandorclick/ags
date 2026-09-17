@@ -356,7 +356,7 @@ void AGSWin32::PostBackendExit() {
 
 SetupReturnValue AGSWin32::RunSetup(const ConfigTree &cfg_in, const ConfigTree &def_cfg_in, ConfigTree &cfg_out)
 {
-  String version_str = String::FromFormat("Adventure Game Studio v%s setup", get_engine_version());
+  String version_str = String::FromFormat("Sierra Quest setup (build %s)", get_engine_version()); // Sierra Quest: retitled
   return AGS::Engine::WinSetup(cfg_in, def_cfg_in, cfg_out, usetup.MainDataDir, version_str);
 }
 
@@ -401,7 +401,7 @@ void AGSWin32::WriteStdOutImpl(FILE *file, const char *prefix, const char *fmt, 
 void AGSWin32::DisplayMessageBox(const char *text)
 {
     if (_guiMode)
-        MessageBox((HWND)sys_win_get_window(), text, "Adventure Game Studio", MB_OK | MB_ICONEXCLAMATION);
+        MessageBox((HWND)sys_win_get_window(), text, "Sierra Quest", MB_OK | MB_ICONEXCLAMATION); // Sierra Quest: retitled from "Adventure Game Studio"
 }
 
 void AGSWin32::ShutdownCDPlayer() {

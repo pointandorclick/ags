@@ -54,14 +54,17 @@ extern int miniDumpResultCode;
 static void DisplayException()
 {
     const auto &sc_error = cc_get_error();
-    snprintf(printfworkingspace, PRINT_WORKSPACE_SIZE, "An exception 0x%X occurred in ACWIN.EXE at EIP = 0x%0*" PRIXPTR "; program pointer is %+d, engine version %s, gtags (%d,%d)\n\n"
-        "AGS cannot continue, this exception was fatal. Please note down the numbers above, remember what you were doing at the time and contact the game author for support "
-        "or post these details on the AGS Technical Forum.\n\n%s\n\n"
-        "Most versions of Windows allow you to press Ctrl+C now to copy this entire message to the clipboard for easy reporting.\n\n%s (code %d)",
+    // Sierra Quest: player-facing wording
+    snprintf(printfworkingspace, PRINT_WORKSPACE_SIZE, "Sorry, Sierra Quest has hit an unexpected problem and needs to close.\n"
+        "Your saved games are safe. If this keeps happening, please send the "
+        "details below to support@pointandclick.studio along with what you "
+        "were doing at the time.\n\n"
+        "Press Ctrl+C now to copy this entire message to the clipboard.\n\n"
+        "Exception 0x%X at EIP = 0x%0*" PRIXPTR "; program pointer %+d, build %s, gtags (%d,%d)\n\n%s\n\n%s (code %d)",
         excinfo.ExceptionCode, (int)sizeof(intptr_t) * 2, (intptr_t)excinfo.ExceptionAddress, get_our_eip(), EngineVersion.LongString.GetCStr(), eip_guinum, eip_guiobj, sc_error.CallStack.GetCStr(),
-        (miniDumpResultCode == 0) ? "An error file CrashInfo.dmp has been created. You may be asked to upload this file when reporting this problem on the AGS Forums." :
-        "Unable to create an error dump file.", miniDumpResultCode);
-    MessageBoxA((HWND)sys_win_get_window(), printfworkingspace, "Illegal exception", MB_ICONSTOP | MB_OK);
+        (miniDumpResultCode == 0) ? "A crash file (CrashInfo...dmp) has been created in the game folder. Please attach it to your email." :
+        "Unable to create a crash file.", miniDumpResultCode);
+    MessageBoxA((HWND)sys_win_get_window(), printfworkingspace, "Sierra Quest", MB_ICONSTOP | MB_OK); // Sierra Quest: retitled from "Illegal exception"
 }
 
 int initialize_engine_with_exception_handling(
