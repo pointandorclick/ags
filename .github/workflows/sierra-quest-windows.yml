@@ -1,0 +1,89 @@
+# Sierra Quest: builds the Windows engine (acwin.exe) the same way upstream's
+# .cirrus.yml does for official releases (Engine.sln, Release|Win32, v142),
+# with the dependency versions pinned in ci/windows/Dockerfile.
+name: Sierra Quest Windows engine
+
+on:
+  push:
+    branches: [sierra-quest]
+  workflow_dispatch:
+
+env:
+  SDL_VERSION: 2.30.11
+  SDL2_SOUND_VERSION: 474dbf755a1b67ebe7a55467b4f65e033f268aff
+  XIPH_VERSION: 2022.12.23
+  TOOLSET: v142
+
+jobs:
+  acwin:
+    runs-on: windows-2022
+    env:
+      AGS_LIBOGG_LIB_VS19: ${{ github.workspace }}\Lib\Xiph\x86
+      AGS_LIBTHEORA_LIB_VS19: ${{ github.workspace }}\Lib\Xiph\x86
+      AGS_LIBVORBIS_LIB_VS19: ${{ github.workspace }}\Lib\Xiph\x86
+      AGS_SDL_INCLUDE: ${{ github.workspace }}\Lib\SDL2\include
+      AGS_SDL_SOUND_INCLUDE: ${{ github.workspace }}\Lib\SDL_sound\src
+      AGS_SDL_LIB: ${{ github.workspace }}\Lib\SDL2\lib\x86
+      AGS_SDL_SOUND_LIB_VS19: ${{ github.workspace }}\Lib\SDL_sound\lib\x86
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x86
+
+    - name: Xiph libraries
+      shell: cmd
+      run: |
+        nuget install ericoporto.xiph-for-ags -Version %XIPH_VERSION% -OutputDirectory "%RUNNER_TEMP%\xiph" || exit /b 1
+        mkdir Lib\Xiph\x86
+        copy "%RUNNER_TEMP%\xiph\ericoporto.xiph-for-ags.%XIPH_VERSION%\native\lib\x86\*.lib" Lib\Xiph\x86\ || exit /b 1
+
+    - name: SDL2
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force Lib\SDL2 | Out-Null
+        curl.exe -fL -o sdl2.zip "https://github.com/libsdl-org/SDL/releases/download/release-$env:SDL_VERSION/SDL2-devel-$env:SDL_VERSION-VC.zip"
+        tar -xf sdl2.zip -C Lib\SDL2 --strip-components 1
+        # Same config shim as ci/windows/Dockerfile, used by the SDL_sound build
+        @'
+        set(SDL2_INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/include")
+        if (${CMAKE_SIZEOF_VOID_P} MATCHES 8)
+          set(SDL2_LIBRARIES "${CMAKE_CURRENT_LIST_DIR}/lib/x64/SDL2.lib;${CMAKE_CURRENT_LIST_DIR}/lib/x64/SDL2main.lib")
+        else ()
+          set(SDL2_LIBRARIES "${CMAKE_CURRENT_LIST_DIR}/lib/x86/SDL2.lib;${CMAKE_CURRENT_LIST_DIR}/lib/x86/SDL2main.lib")
+        endif ()
+        '@ | Set-Content Lib\SDL2\sdl2-config.cmake
+
+    - name: SDL_sound
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force Lib\SDL_sound\lib\x86 | Out-Null
+        curl.exe -fL -o sdl_sound.tar.gz "https://github.com/icculus/SDL_sound/archive/$env:SDL2_SOUND_VERSION.tar.gz"
+        tar -xzf sdl_sound.tar.gz -C Lib\SDL_sound --strip-components 1
+        cmake -S Lib\SDL_sound -B Lib\SDL_sound\build_x86 -G "Visual Studio 17 2022" -T $env:TOOLSET -A Win32 "-DCMAKE_PREFIX_PATH=$PWD\Lib\SDL2" -DSDLSOUND_DECODER_MIDI=1
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        cmake --build Lib\SDL_sound\build_x86 --config Release
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        Copy-Item Lib\SDL_sound\build_x86\Release\SDL2_sound-static.lib Lib\SDL_sound\lib\x86\
+
+    - name: Build engine
+      shell: cmd
+      working-directory: Solutions
+      run: msbuild Engine.sln /m /p:MultiProcessorCompilation=true /p:PlatformToolset=%TOOLSET% /p:Configuration=Release /p:Platform=Win32 /nologo
+
+    - name: Collect
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force out | Out-Null
+        Get-ChildItem Solutions\.build -Recurse -Include acwin.exe, acwin.pdb | Copy-Item -Destination out
+        Copy-Item Lib\SDL2\lib\x86\SDL2.dll out
+        "$env:GITHUB_SHA" | Set-Content out\commit.txt
+        Get-ChildItem out
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: acwin-sierra-quest
+        path: out/
+        if-no-files-found: error
