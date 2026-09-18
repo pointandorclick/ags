@@ -37,6 +37,16 @@ int32_t ccRegisterUnserializedObject(int index, void *object, IScriptObject *cal
     return pool.AddUnserializedObject(object, callback, obj_type, index);
 }
 
+// Sierra Quest: register the object unless the pool already has it.
+// A save made before a game object existed doesn't list it in its pool, so
+// after restoring we re-add such objects to keep script pointers to them valid.
+int32_t ccRegisterManagedObjectIfMissing(void *object, IScriptObject *callback) {
+    int32_t handl = pool.AddressToHandle(object);
+    if (handl != 0)
+        return handl;
+    return ccRegisterManagedObject(object, callback);
+}
+
 // unregister a particular object
 int ccUnRegisterManagedObject(void *object) {
     return pool.RemoveObject(object);
