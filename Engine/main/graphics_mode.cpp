@@ -58,6 +58,20 @@ ActiveDisplaySetting SavedWindowedSetting;
 FrameScaleDef        CurFrameSetup;
 // The game-to-screen transformation
 PlaneScaling         GameScaling;
+// Sierra Quest: whether to show the game with tall CRT pixels
+bool                 GameAspectCorrect = false;
+
+// Sierra Quest: the shape the game should have on screen. With aspect
+// correction on, each game pixel is 6/5 as tall as it is wide, so 320x200
+// fills a 4:3 (320x240) box, as it did on a CRT. The graphics drivers already
+// stretch the native image to fill whatever render frame they're given, and
+// mouse mapping follows the frame, so only the frame size needs to change.
+static Size get_game_display_size(const Size &game_size)
+{
+    if (!GameAspectCorrect)
+        return game_size;
+    return Size(game_size.Width, (game_size.Height * 6 + 2) / 5);
+}
 
 
 
@@ -188,9 +202,11 @@ bool find_nearest_supported_mode(const IGfxModeList &modes, const Size &wanted_s
     return false;
 }
 
-Size get_game_frame_from_screen_size(const Size &game_size, const Size screen_size,
+Size get_game_frame_from_screen_size(const Size &native_size, const Size screen_size,
                             const FrameScaleDef frame, int scale = 0)
 {
+    // Sierra Quest: scale the corrected shape rather than the native pixels
+    const Size game_size = get_game_display_size(native_size);
     // Set game frame as native game resolution scaled by particular method
     switch (frame)
     {
@@ -223,7 +239,7 @@ static Size precalc_screen_size(const Size &game_size, int display_index, const 
     const bool windowed = ws.Mode == kWnd_Windowed;
     if (ws.SizeHint == kWndSizeHint_GameNative)
     {
-        return game_size;
+        return get_game_display_size(game_size); // Sierra Quest: corrected shape
     }
     else if (!ws.Size.IsNull())
     {
@@ -449,6 +465,10 @@ bool graphics_mode_init_any(const GraphicResolution &game_res, const DisplayMode
         Debug::Printf(kDbgMsg_Error, "Unable to obtain device resolution");
     if (init_desktop_size)
         *init_desktop_size = device_size;
+
+    // Sierra Quest: set before any frame or window size is worked out
+    GameAspectCorrect = setup.AspectCorrect;
+    Debug::Printf(kDbgMsg_Info, "Graphic settings: CRT aspect correction: %s", GameAspectCorrect ? "on" : "off");
 
     WindowSetup ws = setup.Windowed ? setup.WinSetup : setup.FsSetup;
     FrameScaleDef gameframe = setup.Windowed ? setup.WinGameFrame : setup.FsGameFrame;

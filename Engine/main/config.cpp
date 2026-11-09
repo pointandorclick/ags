@@ -377,6 +377,8 @@ void load_common_config(const ConfigTree &cfg, GameConfig &setup)
         parse_scaling_option(CfgReadString(cfg, "graphics", "game_scale_fs", "proportional"), setup.Display.FsGameFrame);
     setup.Display.WinGameFrame =
         parse_scaling_option(CfgReadString(cfg, "graphics", "game_scale_win", "round"), setup.Display.WinGameFrame);
+    // Sierra Quest: CRT pixel aspect correction, see DisplayModeSetup::AspectCorrect
+    setup.Display.AspectCorrect = CfgReadBoolInt(cfg, "graphics", "aspect_correct", setup.Display.AspectCorrect);
 
     setup.Display.RefreshRate = CfgReadInt(cfg, "graphics", "refresh");
     setup.Display.VSync = CfgReadBoolInt(cfg, "graphics", "vsync");
@@ -501,6 +503,7 @@ void save_common_config(const GameConfig &setup, ConfigTree &cfg)
     CfgWriteString(cfg, "graphics", "window", make_window_mode_option(setup.Display.WinSetup));
     CfgWriteString(cfg, "graphics", "game_scale_fs", make_scaling_option(setup.Display.FsGameFrame));
     CfgWriteString(cfg, "graphics", "game_scale_win", make_scaling_option(setup.Display.WinGameFrame));
+    CfgWriteInt(cfg, "graphics", "aspect_correct", setup.Display.AspectCorrect ? 1 : 0); // Sierra Quest
     CfgWriteInt(cfg, "graphics", "windowed", setup.Display.Windowed ? 1 : 0);
     CfgWriteInt(cfg, "graphics", "refresh", setup.Display.RefreshRate);
     CfgWriteInt(cfg, "graphics", "vsync", setup.Display.VSync ? 1 : 0);

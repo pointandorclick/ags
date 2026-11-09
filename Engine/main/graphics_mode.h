@@ -126,6 +126,10 @@ struct DisplayModeSetup
     bool                 VSync = false;    // vertical sync
 
     GfxFilterSetup       Filter;        // graphics filter definition
+
+    // Sierra Quest: draw the game with tall (6:5) pixels, the way 320x200
+    // art looked on a 4:3 CRT. On by default; aspect_correct=0 turns it off.
+    bool                 AspectCorrect = true;
 };
 
 // Display mode color depth variants suggested for the use
